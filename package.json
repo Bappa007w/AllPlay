@@ -1,0 +1,43 @@
+{
+  "name": "allplay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.18.1 <25",
+    "npm": ">=11 <12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:packages && concurrently --kill-others --names web,server \"npm run dev --workspace=@allplay/web\" \"npm run dev --workspace=@allplay/server\"",
+    "build:packages": "npm run build --workspace=@allplay/shared && npm run build --workspace=@allplay/audio-sync",
+    "build": "npm run build:packages && npm run build --workspace=@allplay/server && npm run build --workspace=@allplay/web",
+    "start": "concurrently --kill-others --names web,server \"npm run start --workspace=@allplay/web\" \"npm run start --workspace=@allplay/server\"",
+    "typecheck": "npm run build:packages && npm run typecheck --workspaces --if-present && tsc -p tsconfig.tests.json",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run build:packages && vitest run",
+    "test:watch": "npm run build:packages && vitest",
+    "smoke:dev": "npm run build:packages && node scripts/smoke.mjs dev",
+    "smoke:production": "node scripts/smoke.mjs production"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.19.2",
+    "concurrently": "10.0.6",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "socket.io-client": "4.8.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  }
+}

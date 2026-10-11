@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-midnight: #080e1b;
+  --color-surface: #121c2e;
+  --color-electric: #71b7ff;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-midnight);
+  color: #f1f5ff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: #325496;
+  color: white;
+}
