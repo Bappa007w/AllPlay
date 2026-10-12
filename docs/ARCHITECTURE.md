@@ -1,6 +1,12 @@
 # Architecture
 
-Status: approved Phase 0 target architecture. Only the Phase 1 foundation exists unless PROGRESS.md states otherwise.
+Status: Phases 1–3 implement infrastructure, UI foundation and the in-memory Room System. Database persistence, Officer management, music and synchronization remain target design. See PROGRESS.md for actual verification.
+
+### Phase 3 runtime decisions
+
+REST guest bootstrap issues a secure opaque cookie and CSRF token; REST create/join establish membership. Socket.IO authenticates that cookie, room membership and CSRF token, then attaches one active socket per identity. New tabs take over instead of doubling participants. Full snapshots with revisions cover all presence changes and reconnect recovery. No room secrets are put into URLs, JSON responses or browser storage.
+
+`modules/rooms/room-service.ts` owns atomic memory mutations and injectable-time expiry; `modules/rooms/http.ts` and `realtime/create-socket-server.ts` are transport adapters. A one-second unreferenced timer sweeps expired data. The timer is stopped on shutdown. Up to 500 rooms and 5,000 guest sessions are retained, with bounded rate buckets and entry receipts. Restart discards all room/session state; UI clearly reports unavailable rooms. These are single-server development safeguards, not production capacity certification.
 
 ## Product and boundaries
 

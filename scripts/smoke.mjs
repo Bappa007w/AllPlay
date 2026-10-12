@@ -120,7 +120,7 @@ try {
   const page = await waitFor(webOrigin);
   const html = await page.text();
   assert(html.includes("One Beat. Every Device."));
-  assert(html.includes("Project foundation"));
+  assert(html.includes("Room sessions are ready"));
   assert(html.includes("not available yet"));
   const cssPath = html.match(/href="([^" ]+\.css(?:\?[^" ]*)?)"/)?.[1];
   assert(cssPath, "Page must include compiled CSS");
@@ -151,7 +151,7 @@ try {
       const rejected = new Promise((resolve) => socket.once("connect_error", resolve));
       socket.connect();
       const error = await rejected;
-      assert.equal(error.message, "ROOM_SESSIONS_NOT_AVAILABLE");
+      assert.equal(error.message, "AUTH_REQUIRED");
       console.info(`PASS ${transport} proxy reaches fail-closed application boundary`);
     } finally {
       socket.disconnect();

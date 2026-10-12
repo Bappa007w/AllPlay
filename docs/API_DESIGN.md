@@ -2,9 +2,20 @@
 
 ## Implemented in Phase 1
 
-`GET /api/v1/health` returns HTTP 200 with `status: "ok"`, `service: "allplay-server"`, and `protocolVersion: 1`. It is liveness only and sends `Cache-Control: no-store`. All other application paths return HTTP 404 with a safe `NOT_FOUND` error.
+`GET /api/v1/health` returns HTTP 200 with `status: "ok"`, `service: "allplay-server"`, and `protocolVersion: 1`. It is liveness only and sends `Cache-Control: no-store`.
 
-No admin, room, library or upload endpoints below are implemented yet.
+## Implemented in Phase 3
+
+- `POST /api/v1/session`: exact Origin required; sets an HttpOnly SameSite=Strict guest cookie only when a valid session is absent. Returns `{ ok: true, data: { csrfToken, expiresAt, roomId } }`. Production uses a Secure `__Host-allplay_guest` cookie. The raw session credential never appears in JSON.
+- `POST /api/v1/rooms`: cookie + `X-CSRF-Token` + exact Origin; strict JSON `{ displayName, requestId }`, with a UUID request ID. Returns `{ ok: true, data: { room, participantId } }`.
+- `POST /api/v1/rooms/:roomId/join`: same contract. Joining an existing membership returns it without changing its name or role.
+- `GET /api/v1/rooms/:roomId`: membership-authorized snapshot. Room IDs do not authorize access to the participant list.
+
+All room responses are no-store. Errors use `{ ok: false, error: { code, message } }`. Codes include AUTH_REQUIRED (401), ORIGIN_REJECTED / CSRF_REJECTED / NOT_A_MEMBER (403), ROOM_NOT_FOUND (404), ROOM_FULL / ALREADY_IN_ROOM / REQUEST_CONFLICT (409), INVALID_REQUEST (400), RATE_LIMITED / SESSION_LIMIT (429), BUSY (503). Bodies are limited to 16 KiB. Unknown fields, including client-supplied roles, are rejected.
+
+Entry retries must reuse their UUID and identical details. Successful entry receipts are retained for the session lifetime, capped at 100 without eviction. A retry cannot resurrect a closed room or departed membership. One active membership per guest browser session; leave/close before creating another. Session bootstrap uses a browser Web Lock where supported to serialize cross-tab cookie initialization.
+
+No administrator, music or upload endpoints are implemented yet. The table below describes future targets; the implemented snapshot path above deliberately omits `/state`.
 
 ## Target endpoints
 

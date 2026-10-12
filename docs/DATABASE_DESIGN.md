@@ -1,6 +1,6 @@
 # Database design
 
-Target design only. No database dependency, schema, migration or connection exists in Phase 1. PostgreSQL and Prisma arrive in Phase 5.
+Target design only. Through Phase 3 there is no database dependency, schema, migration or connection. PostgreSQL and Prisma arrive in Phase 5. The current room service uses bounded Maps for rooms, memberships, hashed guest sessions, entry receipts and rate buckets. A restart loses them all; an old cookie cannot recover a Host after restart. No continuously updated playback progress is persisted.
 
 | Model              | Key fields and relationships                                                       |
 | ------------------ | ---------------------------------------------------------------------------------- |

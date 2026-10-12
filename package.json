@@ -23,11 +23,14 @@
     "format:check": "prettier --check .",
     "test": "npm run build:packages && vitest run",
     "test:watch": "npm run build:packages && vitest",
+    "test:ui": "npm run build:packages && playwright test",
     "smoke:dev": "npm run build:packages && node scripts/smoke.mjs dev",
     "smoke:production": "node scripts/smoke.mjs production"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "9.39.5",
+    "@playwright/test": "1.64.0",
     "@types/node": "24.19.2",
     "concurrently": "10.0.6",
     "eslint": "9.39.5",

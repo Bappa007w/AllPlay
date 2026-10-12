@@ -16,6 +16,7 @@ try {
 }
 
 const nextConfig: NextConfig = {
+  distDir: process.env.ALLPLAY_E2E === "1" ? ".next-e2e" : ".next",
   poweredByHeader: false,
   reactStrictMode: true,
   // Engine.IO uses /socket.io/; a redirect can break polling POSTs and WebSocket upgrades.

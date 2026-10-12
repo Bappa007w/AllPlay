@@ -1,6 +1,6 @@
 # Development plan
 
-Phase 0 architecture and Phase 1 initialization were explicitly approved. Approval never advances automatically to another phase.
+Phases 0–3 were explicitly approved. Phase 3 implements the in-memory Room System; Phase 4 is not approved. Approval never advances automatically to another phase.
 
 | Phase | Scope                                                                | Exit evidence                                           |
 | ----- | -------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -44,6 +44,14 @@ Desktop room: top room/invite/status/settings bar, library on the left, player i
 | `/privacy`, `/terms` | Actual deployment policies; owner details required |
 
 Required states include loading, empty library/queue, search no results, upload progress/processing/error, audio activation, preparation, synchronization, reconnect, reduced precision, room full/closed/expired and removal. Room settings and invitation details use dialogs/drawers.
+
+## Phase 2 implementation decisions
+
+The homepage is a Server Component with original CSS device artwork, feature descriptions, a four-step guide and native accessible FAQ disclosures. Client components are limited to navigation and entry forms. A locally bundled Manrope variable font avoids third-party font requests. Lucide supplies icons; reusable local shadcn-style Button/Input primitives use Radix Slot, CVA and class merging. CSS transitions respect reduced-motion preferences; a Motion dependency was unnecessary for these interactions.
+
+Create/join forms validate locally, focus invalid fields, associate errors with inputs and announce feedback. They do not create sessions, look up rooms or save entered data. The UI-preview room alphabet is human-friendly Base32: A–Z excluding I/O plus digits 2–9, 12 characters; separators and lowercase normalize on submit. Phase 3 must share the finalized contract with the server and replace this UI-only validation. Forms explicitly disclose unavailable room functionality.
+
+Desktop, tablet and narrow-mobile breakpoints are defined; 320px overflow, keyboard skips, menu Escape handling, local validation, clean-context hydration and WCAG A/AA automated checks are covered by Playwright/axe. Visual browser review supplements the tests. Authentication and socket authorization remain the Phase 1 fail-closed foundation.
 
 ## Explicitly deferred features
 

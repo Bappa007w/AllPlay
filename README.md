@@ -2,7 +2,7 @@
 
 **One Beat. Every Device.**
 
-AllPlay is a planned synchronized music platform with account-free rooms and an administrator-managed music library. This repository currently implements **Phase 1: project initialization only**. Room creation, authentication, uploads, playback, and synchronization are not implemented.
+AllPlay is a planned synchronized music platform with account-free rooms and an administrator-managed music library. This repository implements **Phase 3: Room System**: real guest room creation/joining, secure Host identity, live presence, invitations, reconnection and room closure. Officer management, database persistence, administrator authentication, uploads, playback and audio synchronization are not implemented.
 
 ## Requirements
 
@@ -23,13 +23,17 @@ npm.cmd run dev
 
 Copy `.env.example` only when `.env` does not already exist. The local defaults also work without an `.env` file. Never commit real secrets.
 
-- Web shell: <http://localhost:3000>
+- Homepage: <http://localhost:3000>
+- Create interface: <http://localhost:3000/create>
+- Join interface: <http://localhost:3000/join>
 - Same-origin liveness: <http://localhost:3000/api/v1/health>
 - Direct backend liveness: <http://127.0.0.1:3001/api/v1/health>
 
-The page explicitly labels itself as the Phase 1 shell. Health reports process liveness only. There are no working Create Room or Join Room buttons yet. Socket.IO transport accepts only the configured `WEB_ORIGIN`; application connections are deliberately rejected until Phase 3 session authorization exists. `localhost` and `127.0.0.1` are different origins.
+Create a room with a display name, then share its `/room/[roomId]` invitation. Test a second participant in an incognito window or another browser profile: tabs share a guest cookie and the newest room tab takes over that identity. Refresh preserves the Host role. The Host closes the room; participants can leave. Room codes are not Host credentials. Losing the cookie loses anonymous ownership.
 
-Both servers bind to loopback by default. Stop development with Ctrl+C. Ports in use cause an error; do not terminate unrelated processes. Shared packages compile before startup. After editing a shared package during Phase 1, restart `npm.cmd run dev` to rebuild its output.
+Rooms are in process memory: restarting the backend deletes rooms and sessions. Defaults are 20 people, 24-hour expiry, 10-minute Host absence grace and 2-minute participant reconnection reservation. Only one active room per browser session; return to your current room and leave/close it before creating another. Music and timeline artwork remain explicitly conceptual. Health reports process liveness only. `WEB_ORIGIN` must match the browser origin exactly: `localhost` and `127.0.0.1` are different origins. Use localhost:3000 with the default configuration.
+
+Both servers accept connections from the local network by default. Stop development with Ctrl+C. Ports in use cause an error; do not terminate unrelated processes. Shared packages compile before startup. After editing a shared package during Phase 1, restart `npm.cmd run dev` to rebuild its output.
 
 ## Checks
 
@@ -38,6 +42,7 @@ npm.cmd run lint
 npm.cmd run format:check
 npm.cmd run typecheck
 npm.cmd run test
+npm.cmd run test:ui
 npm.cmd run build
 npm.cmd run smoke:dev
 npm.cmd run smoke:production
@@ -45,22 +50,39 @@ npm.cmd run smoke:production
 
 Run smoke commands with ports 3000 and 3001 free and no other Next.js build/dev process running. They launch and clean up their own processes, test real HTTP/CSS/API responses, and verify graceful backend shutdown. The production smoke uses the already-built app and does not claim a production deployment or real-device audio verification. Rebuild after changes before running it.
 
-For an npm Run Configuration in WebStorm, select the root `package.json` and the `dev`, `test`, `typecheck`, or `build` script. Root scripts respect dependency order; avoid directly starting an app on a fresh clone before building shared packages.
+UI tests use installed Google Chrome through Playwright, with desktop and mobile-emulated projects. Install Google Chrome before running `test:ui`; no extension-enabled user profile is used. Tests own separate web/backend servers on 3100/3101 and use `.next-e2e` build output, leaving development servers untouched. Those test ports must be free. Tests include real multi-context room journeys and axe scans; passing these is not a complete accessibility certification or physical-phone/acoustic test.
+
+For an npm Run Configuration in WebStorm, select the root `package.json` and the `dev`, `test`, `test:ui`, `typecheck`, or `build` script. Root scripts respect dependency order; avoid directly starting an app on a fresh clone before building shared packages.
 
 ## Structure and configuration
 
-- `apps/web`: Next.js App Router and Tailwind shell.
-- `apps/server`: Express liveness, bounded Socket.IO foundation and shutdown handling.
-- `packages/shared`: public constants, health schema and empty socket contract boundaries.
+- `apps/web`: Next.js routes, Tailwind theme, local Manrope font, Radix/CVA button primitive, Lucide icons and responsive UI.
+- `apps/server`: Express room/session routes, in-memory lifecycle service, authenticated Socket.IO and shutdown handling.
+- `packages/shared`: public room/health types, strict input schemas and typed socket contracts.
 - `packages/audio-sync`: clock-related type boundary only; no synchronization algorithm yet.
-- `tests`: environment and live-server integration tests.
+- `tests`: environment, live-server integration and browser UI/accessibility tests.
 - `scripts/smoke.mjs`: local development/production HTTP smoke runner.
 - `docs`: approved architecture, phase plan and actual progress.
 
 Root `.env` is loaded by both apps. `API_INTERNAL_URL` is server-only and configures Next.js rewrites; build again if its production value changes. Do not place secrets in `NEXT_PUBLIC_*` variables. Production backend configuration requires an HTTPS `WEB_ORIGIN`; TLS termination and deployment configuration belong to Phase 11. Local HTTP defaults are for development.
 
+## Container deployment
+
+The included `Dockerfile` builds and runs the web and API services in one container. Set `WEB_ORIGIN` to the exact public HTTPS origin. The hosting platform should route public traffic to the `PORT` environment variable (3000 by default); port 3001 remains internal to the container.
+
+```powershell
+docker build -t allplay .
+docker run --rm -p 3000:3000 -e WEB_ORIGIN=https://allplay.example.com allplay
+```
+
+For a real deployment, replace the example origin with the deployed URL and terminate TLS at the hosting platform or reverse proxy. WebSocket upgrades for `/socket.io/` must be enabled. Because rooms are currently stored in memory, use one container instance; restarts remove active rooms.
+
 Dependencies are pinned and locked. ESLint 9 is temporarily retained because the current Next.js React/import/accessibility lint dependencies do not declare ESLint 10 compatibility. See [SECURITY.md](docs/SECURITY.md) for the known development-only dependency advisory and upgrade criteria.
 
 ## Development agreement
 
-Only one explicitly approved phase is implemented at a time. Each phase includes relevant validation and a progress update. Phase 2 needs separate approval. See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) and [PROGRESS.md](docs/PROGRESS.md).
+Only one explicitly approved phase is implemented at a time. Each phase includes relevant validation and a progress update. Phase 3 needs separate approval. See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) and [PROGRESS.md](docs/PROGRESS.md).
+
+## Browser extension troubleshooting
+
+If a hydration warning shows injected `crxlauncher` attributes and a `chrome-extension://` stack, verify in Chrome Guest mode. Those attributes are not in AllPlay's source. Disable that extension for localhost if the warning disappears. We do not suppress hydration warnings globally; browser tests watch for actual client errors in a clean context.

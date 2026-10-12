@@ -1,6 +1,12 @@
 # Security design and current boundaries
 
-Phase 1 is not production-ready. It implements local-only binding by default, validated environment values, safe health/404 responses, no-store/nosniff headers, bounded Socket.IO payloads, exact socket Origin checking and fail-closed application connections. No authentication, CSRF, production rate limiting, upload security or persistence is implemented yet.
+Phase 3 is not production-ready. Guest session authentication, Host authorization, CSRF protection and bounded in-memory rate limiting are implemented. Administrator authentication, upload security, deployment hardening and durable persistence remain future phases.
+
+Guest tokens contain 256 random bits and are stored only as SHA-256 digests on the server. Cookies are HttpOnly, SameSite=Strict, 24-hour fixed expiry; production adds Secure and the `__Host-` prefix. CSRF tokens are independent random values; production requires an HTTPS public origin. Strict request schemas reject role injection. Snapshots expose participant UUIDs, never session digests/tokens. Display names render as escaped React text. Anonymous Host identity cannot be recovered without its cookie.
+
+REST mutations require exact Origin and, except initial session bootstrap, cookie-bound CSRF. Socket handshake requires exact Origin; for browser same-origin polling GETs that omit it, both `Sec-Fetch-Site: same-origin` and a matching Referer origin are required instead. Explicit foreign Origin always fails. Handshake and every event validate session/expiry; only active membership is attached. Expired connected participants are evicted. New tabs disconnect old sockets and cannot overwrite their new presence during old-socket cleanup.
+
+Per-minute limits: HTTP 240 per direct remote address, handshakes 120 per address, room admission 20 per session, socket events 60 per session. The app deliberately does not trust arbitrary X-Forwarded-For. With Next's development proxy, many clients share one backend address: configure a trusted ingress/rate limiter before production scale, not blanket `trust proxy`. Hard caps: 500 rooms, 5,000 sessions, 10,000 rate buckets, 100 admission receipts per session. No durable/distributed abuse prevention or audit store exists yet.
 
 ## Dependency review: 2026-10-12
 

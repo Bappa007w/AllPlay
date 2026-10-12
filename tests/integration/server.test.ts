@@ -31,11 +31,12 @@ describe("HTTP and Socket.IO foundation", () => {
     expect(response.headers.has("x-powered-by")).toBe(false);
   });
 
-  it("does not expose room creation before its approved phase", async () => {
+  it("rejects room creation without a trusted origin", async () => {
     const response = await fetch(`${baseUrl}/api/v1/rooms`, { method: "POST" });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
-      error: { code: "NOT_FOUND", message: "Route not found" },
+      ok: false,
+      error: { code: "ORIGIN_REJECTED", message: "Untrusted request origin." },
     });
   });
 
@@ -58,7 +59,40 @@ describe("HTTP and Socket.IO foundation", () => {
     },
   );
 
-  it("fails closed for application connections until guest sessions exist", async () => {
+  it("accepts browser same-origin polling metadata but not cross-origin or missing metadata", async () => {
+    const url = `${baseUrl}/socket.io/?EIO=4&transport=polling`;
+    expect(
+      (
+        await fetch(url, {
+          headers: { Referer: `${webOrigin}/room/ABCDEFGHJK23`, "Sec-Fetch-Site": "same-origin" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (await fetch(url, { headers: { Referer: `${webOrigin}/`, "Sec-Fetch-Site": "cross-site" } }))
+        .status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(url, {
+          headers: {
+            Origin: "https://evil.example",
+            Referer: `${webOrigin}/`,
+            "Sec-Fetch-Site": "same-origin",
+          },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(url, {
+          headers: { Referer: "https://evil.example/", "Sec-Fetch-Site": "same-origin" },
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it("fails closed for application connections without a guest session", async () => {
     const socket = connect(baseUrl, {
       transports: ["websocket"],
       extraHeaders: { Origin: webOrigin },
@@ -70,7 +104,7 @@ describe("HTTP and Socket.IO foundation", () => {
       const rejected = new Promise<Error>((resolve) => socket.once("connect_error", resolve));
       socket.connect();
       const error = await rejected;
-      expect(error.message).toBe("ROOM_SESSIONS_NOT_AVAILABLE");
+      expect(error.message).toBe("AUTH_REQUIRED");
       expect(socket.connected).toBe(false);
     } finally {
       socket.disconnect();

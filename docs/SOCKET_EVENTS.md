@@ -1,6 +1,23 @@
 # Socket.IO protocol
 
-Phase 1 starts Socket.IO with a 16 KiB message limit and exact Origin checking. It deliberately rejects every application connection with `ROOM_SESSIONS_NOT_AVAILABLE`. This is a foundation, not implemented guest authentication. Shared event types are empty until Phase 3.
+## Implemented Phase 3 protocol
+
+Socket.IO has a 16 KiB message limit, exact Origin checking and cookie session validation. Handshake auth is strictly `{ roomId, csrfToken }`. Membership must already exist through REST; roles are never accepted from the client. Unauthorized connections fail with `AUTH_REQUIRED`; guest identity, membership and CSRF are checked again on reconnect. The server revalidates session expiry for each event.
+
+| Direction       | Event              | Payload / acknowledgment                                                               |
+| --------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| Client → server | `room:state`       | Callback → `Result<Membership>`; full recovery snapshot                                |
+| Client → server | `room:leave`       | `{ requestId: UUID, expectedRevision }` + callback → `Result<null>`; participants only |
+| Client → server | `room:close`       | Same command envelope; Host only                                                       |
+| Server → client | `room:state`       | Full `RoomState`, including monotonic revision and public participant IDs              |
+| Server → client | `room:closed`      | Safe reason text, followed by disconnection                                            |
+| Server → client | `session:replaced` | Another socket took over this membership; old socket disconnects                       |
+
+Typed contracts and Zod input validators live in `packages/shared`. The room ID and actor are bound to the handshake rather than repeated in commands. Presence changes increment revisions. Clients recover a snapshot on every connect, discard older revisions, disable mutation while disconnected and do not enqueue offline commands. Replaced tabs stop reconnecting automatically.
+
+Create/join have persistent-in-session idempotency receipts. Leave/close are terminal operations: successful execution removes membership/room and disconnects the socket, so replay cannot mutate again. UUIDs are validated but terminal acknowledgment receipts are not retained; after an acknowledgment timeout, refresh membership rather than assume success. Stale commands fail with `STALE_REVISION`; the UI fetches current state and requires another deliberate action. No playback, queue, officer or clock events are implemented yet.
+
+Synchronous in-memory mutations execute without await points on a single Node process. Horizontal scaling will require shared authority/serialization, not just a Socket.IO adapter.
 
 ## Planned contracts
 
