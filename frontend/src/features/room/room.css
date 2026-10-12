@@ -1,0 +1,67 @@
+.room-main {
+  padding-block: 4rem;
+  min-height: 70vh;
+}
+.room-main h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-block: 1rem;
+}
+.room-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+  margin-block: 2rem;
+}
+.room-code {
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+.room-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+  margin-block: 2rem;
+}
+.room-panel {
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--surface, #101724);
+  border: 1px solid #2d3a52;
+  border-radius: 1.5rem;
+}
+.room-panel h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+}
+.room-panel p {
+  margin-block: 1rem;
+  overflow-wrap: anywhere;
+}
+.room-participants {
+  list-style: none;
+  padding: 0;
+}
+.room-participants li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid #2d3a52;
+  overflow-wrap: anywhere;
+}
+.room-participants li > span:first-child {
+  min-width: 0;
+}
+.room-participants small {
+  display: block;
+  color: #a6b6d0;
+}
+.room-return {
+  margin-block: 2rem;
+}
+@media (max-width: 760px) {
+  .room-grid {
+    grid-template-columns: 1fr;
+  }
+}
