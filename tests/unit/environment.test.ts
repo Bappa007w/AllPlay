@@ -1,10 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { parseEnvironment } from "../../apps/server/src/config/environment.js";
+import { parseEnvironment } from "../../backend/src/config/environment.js";
 
 describe("server environment", () => {
+  it("requires shared TLS storage and an explicit namespace on Vercel", () => {
+    expect(() => parseEnvironment({ VERCEL: "1" })).toThrow("use Redis");
+    expect(() =>
+      parseEnvironment({
+        NODE_ENV: "production",
+        WEB_ORIGIN: "https://example.com",
+        ROOM_STORE: "redis",
+        REDIS_URL: "redis://localhost:6379",
+      }),
+    ).toThrow("TLS");
+    expect(() =>
+      parseEnvironment({
+        VERCEL: "1",
+        ROOM_STORE: "redis",
+        REDIS_URL: "rediss://default:secret@host:6379",
+      }),
+    ).toThrow("deployment-specific");
+    expect(
+      parseEnvironment({
+        VERCEL: "1",
+        ROOM_STORE: "redis",
+        REDIS_URL: "rediss://default:secret@host:6379",
+        REDIS_KEY_PREFIX: "allplay:test",
+      }).ROOM_STORE,
+    ).toBe("redis");
+  });
   it("uses local-only development defaults", () => {
     expect(parseEnvironment({})).toEqual({
       NODE_ENV: "development",
+      ROOM_STORE: "memory",
+      REDIS_KEY_PREFIX: "allplay:local",
       SERVER_HOST: "127.0.0.1",
       SERVER_PORT: 3001,
       WEB_ORIGIN: "http://localhost:3000",

@@ -3,8 +3,8 @@ import type { AddressInfo } from "node:net";
 import { healthResponseSchema } from "@allplay/shared";
 import { io as connect } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { parseEnvironment } from "../../apps/server/src/config/environment.js";
-import { createRuntime } from "../../apps/server/src/server.js";
+import { parseEnvironment } from "../../backend/src/config/environment.js";
+import { createRuntime } from "../../backend/src/server.js";
 
 describe("HTTP and Socket.IO foundation", () => {
   let runtime: ReturnType<typeof createRuntime>;

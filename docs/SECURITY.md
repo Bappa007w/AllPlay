@@ -6,7 +6,13 @@ Guest tokens contain 256 random bits and are stored only as SHA-256 digests on t
 
 REST mutations require exact Origin and, except initial session bootstrap, cookie-bound CSRF. Socket handshake requires exact Origin; for browser same-origin polling GETs that omit it, both `Sec-Fetch-Site: same-origin` and a matching Referer origin are required instead. Explicit foreign Origin always fails. Handshake and every event validate session/expiry; only active membership is attached. Expired connected participants are evicted. New tabs disconnect old sockets and cannot overwrite their new presence during old-socket cleanup.
 
-Per-minute limits: HTTP 240 per direct remote address, handshakes 120 per address, room admission 20 per session, socket events 60 per session. The app deliberately does not trust arbitrary X-Forwarded-For. With Next's development proxy, many clients share one backend address: configure a trusted ingress/rate limiter before production scale, not blanket `trust proxy`. Hard caps: 500 rooms, 5,000 sessions, 10,000 rate buckets, 100 admission receipts per session. No durable/distributed abuse prevention or audit store exists yet.
+Per-minute limits: session bootstrap 240 per direct remote address, room admission 20 per session, room reads/handshakes/socket events each 60 per session. The app deliberately does not trust arbitrary X-Forwarded-For. Proxy clients may share one backend address: configure a trusted ingress/rate limiter before production scale, not blanket `trust proxy`. Local caps: 500 rooms, 5,000 sessions, 10,000 rate buckets, 100 admission receipts per session. Redis demo mode limits rooms to 5 and sessions to 100; rate counters share the same CAS state. This does not replace edge-level abuse protection, and no audit store exists yet.
+
+## Approved Vercel preparation
+
+Vercel configuration fails closed unless Redis mode and a non-default namespace are configured. Production Redis requires TLS. Secrets remain server-side, raw Redis errors are not returned or logged, and storage failures never create a split-brain memory fallback. Redis contains sensitive session digests and CSRF data: restrict account access and never expose its URL to the browser. Docker build context now excludes nested environment files too.
+
+Cross-instance state uses bounded optimistic retries; commands validate current authorization after each reload. Presence cleanup checks the stored socket ID so old connections cannot detach replacements. Adapter broadcasts are reconciled periodically because pub/sub is not durable. Real provider connectivity, deployment routing, free quotas and outage behavior still need live testing. A free-plan deployment is not a production security certification.
 
 ## Dependency review: 2026-10-12
 

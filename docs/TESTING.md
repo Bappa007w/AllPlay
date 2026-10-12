@@ -10,7 +10,7 @@ Run from the repository root with npm.cmd on Windows:
 | npm.cmd run format:check     | Prettier consistency                                              |
 | npm.cmd run typecheck        | Package, backend, web and test types                              |
 | npm.cmd run test             | Environment validation and live HTTP/Socket.IO integration        |
-| npm.cmd run build            | Compiled packages/server and production Next build                |
+| npm.cmd run build            | Compiled shared/backend code and production Next build            |
 | npm.cmd run smoke:dev        | Real dev servers, shell/CSS, API/socket rewrites, graceful stop   |
 | npm.cmd run smoke:production | Built web/server HTTP smoke and graceful stop                     |
 | npm.cmd audit --omit=dev     | Production dependency advisories                                  |

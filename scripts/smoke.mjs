@@ -97,10 +97,8 @@ try {
   await assertPortAvailable(3000);
   await assertPortAvailable(3001);
   const serverArgs =
-    mode === "production"
-      ? ["../../scripts/start-server.mjs"]
-      : ["--import", "tsx", "src/index.ts"];
-  const server = launch("server", serverArgs, `${root}/apps/server`, true);
+    mode === "production" ? ["../scripts/start-server.mjs"] : ["--import", "tsx", "src/index.ts"];
+  const server = launch("server", serverArgs, `${root}/backend`, true);
   launch(
     "web",
     [
@@ -111,7 +109,7 @@ try {
       "--port",
       "3000",
     ],
-    `${root}/apps/web`,
+    `${root}/frontend`,
   );
 
   const directHealth = await waitFor(`${apiOrigin}/api/v1/health`);

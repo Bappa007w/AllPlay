@@ -31,7 +31,7 @@ Copy `.env.example` only when `.env` does not already exist. The local defaults 
 
 Create a room with a display name, then share its `/room/[roomId]` invitation. Test a second participant in an incognito window or another browser profile: tabs share a guest cookie and the newest room tab takes over that identity. Refresh preserves the Host role. The Host closes the room; participants can leave. Room codes are not Host credentials. Losing the cookie loses anonymous ownership.
 
-Rooms are in process memory: restarting the backend deletes rooms and sessions. Defaults are 20 people, 24-hour expiry, 10-minute Host absence grace and 2-minute participant reconnection reservation. Only one active room per browser session; return to your current room and leave/close it before creating another. Music and timeline artwork remain explicitly conceptual. Health reports process liveness only. `WEB_ORIGIN` must match the browser origin exactly: `localhost` and `127.0.0.1` are different origins. Use localhost:3000 with the default configuration.
+Local defaults store rooms in memory; restarting the backend deletes them. The optional Redis mode shares room state and sessions across instances. Defaults are 20 people, 24-hour expiry, 10-minute Host absence grace and 2-minute participant reconnection reservation. Only one active room per browser session; return to your current room and leave/close it before creating another. Music and timeline artwork remain explicitly conceptual. Health reports process liveness only. `WEB_ORIGIN` must match the browser origin exactly: `localhost` and `127.0.0.1` are different origins. Use localhost:3000 with the default configuration.
 
 Both servers accept connections from the local network by default. Stop development with Ctrl+C. Ports in use cause an error; do not terminate unrelated processes. Shared packages compile before startup. After editing a shared package during Phase 1, restart `npm.cmd run dev` to rebuild its output.
 
@@ -56,10 +56,27 @@ For an npm Run Configuration in WebStorm, select the root `package.json` and the
 
 ## Structure and configuration
 
-- `apps/web`: Next.js routes, Tailwind theme, local Manrope font, Radix/CVA button primitive, Lucide icons and responsive UI.
-- `apps/server`: Express room/session routes, in-memory lifecycle service, authenticated Socket.IO and shutdown handling.
-- `packages/shared`: public room/health types, strict input schemas and typed socket contracts.
-- `packages/audio-sync`: clock-related type boundary only; no synchronization algorithm yet.
+```text
+AllPlay/
+├── frontend/          # Pages, components and browser UI
+├── backend/           # REST API, rooms and Socket.IO
+├── shared/
+│   ├── contracts/     # Shared types and input schemas
+│   └── audio-sync/    # Audio timing boundary (future implementation)
+├── tests/
+├── scripts/
+├── docs/
+├── Dockerfile
+├── vercel.json
+└── package.json
+```
+
+Run npm commands from the root. Existing `@allplay/*` package names stay unchanged; the folders are simpler without changing import contracts. Edit source under `src/`, never generated `dist/` files.
+
+- `frontend`: Next.js routes, Tailwind theme, local Manrope font, Radix/CVA button primitive, Lucide icons and responsive UI.
+- `backend`: Express room/session routes, in-memory lifecycle service, authenticated Socket.IO and shutdown handling.
+- `shared/contracts`: public room/health types, strict input schemas and typed socket contracts.
+- `shared/audio-sync`: clock-related type boundary only; no synchronization algorithm yet.
 - `tests`: environment, live-server integration and browser UI/accessibility tests.
 - `scripts/smoke.mjs`: local development/production HTTP smoke runner.
 - `docs`: approved architecture, phase plan and actual progress.
@@ -67,6 +84,8 @@ For an npm Run Configuration in WebStorm, select the root `package.json` and the
 Root `.env` is loaded by both apps. `API_INTERNAL_URL` is server-only and configures Next.js rewrites; build again if its production value changes. Do not place secrets in `NEXT_PUBLIC_*` variables. Production backend configuration requires an HTTPS `WEB_ORIGIN`; TLS termination and deployment configuration belong to Phase 11. Local HTTP defaults are for development.
 
 ## Container deployment
+
+For the approved zero-budget Vercel setup, use [VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md). The root `vercel.json` prepares frontend and backend as two Services in one Vercel project. Redis is required on Vercel; real Redis and deployed WebSocket behavior still require verification. The Dockerfile below is an alternative local/container workflow, not the Vercel build entrypoint.
 
 The included `Dockerfile` builds and runs the web and API services in one container. Set `WEB_ORIGIN` to the exact public HTTPS origin. The hosting platform should route public traffic to the `PORT` environment variable (3000 by default); port 3001 remains internal to the container.
 
@@ -81,7 +100,7 @@ Dependencies are pinned and locked. ESLint 9 is temporarily retained because the
 
 ## Development agreement
 
-Only one explicitly approved phase is implemented at a time. Each phase includes relevant validation and a progress update. Phase 3 needs separate approval. See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) and [PROGRESS.md](docs/PROGRESS.md).
+Only one explicitly approved phase is implemented at a time. Each phase includes relevant validation and a progress update. Phase 3 and free deployment preparation were approved; Phase 4 and later product features still require approval. See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) and [PROGRESS.md](docs/PROGRESS.md).
 
 ## Browser extension troubleshooting
 

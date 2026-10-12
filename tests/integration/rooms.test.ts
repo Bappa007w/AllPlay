@@ -9,8 +9,8 @@ import type {
   Membership,
   Result,
 } from "@allplay/shared";
-import { createRuntime } from "../../apps/server/src/server.js";
-import { parseEnvironment } from "../../apps/server/src/config/environment.js";
+import { createRuntime } from "../../backend/src/server.js";
+import { parseEnvironment } from "../../backend/src/config/environment.js";
 
 describe("authenticated room HTTP and sockets", () => {
   let runtime: ReturnType<typeof createRuntime>, base: string;

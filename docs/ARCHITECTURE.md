@@ -6,7 +6,7 @@ Status: Phases 1–3 implement infrastructure, UI foundation and the in-memory R
 
 REST guest bootstrap issues a secure opaque cookie and CSRF token; REST create/join establish membership. Socket.IO authenticates that cookie, room membership and CSRF token, then attaches one active socket per identity. New tabs take over instead of doubling participants. Full snapshots with revisions cover all presence changes and reconnect recovery. No room secrets are put into URLs, JSON responses or browser storage.
 
-`modules/rooms/room-service.ts` owns atomic memory mutations and injectable-time expiry; `modules/rooms/http.ts` and `realtime/create-socket-server.ts` are transport adapters. A one-second unreferenced timer sweeps expired data. The timer is stopped on shutdown. Up to 500 rooms and 5,000 guest sessions are retained, with bounded rate buckets and entry receipts. Restart discards all room/session state; UI clearly reports unavailable rooms. These are single-server development safeguards, not production capacity certification.
+`modules/rooms/room-service.ts` owns synchronous domain mutations and injectable-time expiry; HTTP and Socket.IO are transport adapters. `coordinator.ts` loads a validated snapshot and commits through a compare-and-set store, publishing effects only after success. Local memory mode supports up to 500 rooms and 5,000 sessions and loses state on restart. Redis mode shares state, rate counters and Socket.IO broadcasts across instances, with tighter demo caps of 5 rooms, 100 sessions and a 512 KiB snapshot. Cleanup is lazy on operations and active-socket refreshes (1 second locally, 30 seconds in cloud mode). Persisted 90-second connection leases handle vanished cloud instances. See VERCEL_DEPLOYMENT.md for limits and outstanding live verification.
 
 ## Product and boundaries
 
@@ -28,18 +28,18 @@ flowchart TB
   Coordinator -->|Timeline and clock metadata| Browser
 ```
 
-- `apps/web` owns presentation and local device state.
-- `apps/server` owns sessions, validation, authorization, room mutations and scheduling.
-- `packages/shared` owns public schemas/contracts, never secrets or database clients.
-- `packages/database` will own Prisma and persistence from Phase 5.
-- `packages/audio-sync` owns browser-independent clock/timeline math and the later audio engine boundary, without importing server modules.
+- `frontend` owns presentation and local device state.
+- `backend` owns sessions, validation, authorization, room mutations and scheduling.
+- `shared/contracts` owns public schemas/contracts, never secrets or database clients.
+- `backend/database` will own Prisma and persistence from Phase 5.
+- `shared/audio-sync` owns browser-independent clock/timeline math and the later audio engine boundary, without importing server modules.
 - Audio travels over HTTPS, not through Socket.IO.
 
-Use npm workspaces, strict TypeScript and explicit package exports. Shared packages currently build to `dist` before consumers run. Avoid microservices, Redis and complex monorepo orchestration in the single-server MVP.
+Use npm workspaces, strict TypeScript and explicit package exports. Shared packages build to `dist` before consumers run. Redis is optional locally but required for the approved Vercel multi-instance deployment. No additional orchestration is introduced.
 
 ## Runtime
 
-Production routing targets one origin: pages to Next.js, `/api/v1/*` and `/socket.io/*` to a persistent backend. Local Next.js rewrites mirror this routing. Audio uses a separate CDN with controlled CORS. The frontend's hosting must not be expected to run a persistent socket server in request-limited serverless functions.
+Production routing targets one origin: pages to Next.js, `/api/v1/*` and `/socket.io/*` to the backend. Vercel Services Beta provides this routing; its WebSockets Beta requires reconnect handling at function duration limits. State lives outside individual function instances. Local Next.js rewrites mirror the routing. Future audio uses a separate CDN with controlled CORS.
 
 The backend uses transport adapters, Zod validation, session lookup, authorization, domain services and repositories. A room coordinator serializes commands. Database transactions and revision checks guard persistence; a process-local lock alone is insufficient for future scaling.
 
@@ -67,6 +67,6 @@ Host absence does not trigger ownership transfer. Officers may act during the ab
 
 ## Scaling and limitations
 
-The first load-test scenario is 50 rooms with 20 connections each, not a supported-capacity claim. CDN traffic, database pool limits, event-loop delay and cleanup must be measured. Future multi-server operation needs room ownership/fencing as well as a Socket.IO Redis adapter.
+The original future load-test scenario is 50 rooms with 20 connections each, not a supported-capacity claim or the free demo limit. CDN traffic, database pool limits, event-loop delay and cleanup must be measured. Current Redis mode uses global snapshot CAS and socket-ID fencing alongside the adapter. This is not an efficient large-scale room store.
 
 The five-minute audio limit bounds decoded memory but does not guarantee low-memory mobile operation. Bluetooth, background suspension and network asymmetry limit acoustic accuracy. See AUDIO_SYNC_DESIGN.md.

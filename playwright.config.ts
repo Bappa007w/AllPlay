@@ -24,13 +24,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "node --import tsx apps/server/src/index.ts",
+      command: "node --import tsx backend/src/index.ts",
       url: "http://127.0.0.1:3101/api/v1/health",
       reuseExistingServer: false,
       env: { SERVER_PORT: "3101", WEB_ORIGIN: "http://127.0.0.1:3100", NODE_ENV: "test" },
     },
     {
-      command: "npx next dev apps/web --port 3100 --hostname 127.0.0.1",
+      command: "npx next dev frontend --port 3100 --hostname 127.0.0.1",
       url: "http://127.0.0.1:3100",
       reuseExistingServer: false,
       timeout: 120_000,

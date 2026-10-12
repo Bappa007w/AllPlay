@@ -13,13 +13,13 @@ export default defineConfig([
     "**/dist/**",
     "**/coverage/**",
     ".idea/**",
-    "apps/web/next-env.d.ts",
+    "frontend/next-env.d.ts",
   ]),
   js.configs.recommended,
   {
-    files: ["apps/web/**/*.{ts,tsx,js,mjs}"],
+    files: ["frontend/**/*.{ts,tsx,js,mjs}"],
     extends: nextVitals,
-    settings: { next: { rootDir: "apps/web/" } },
+    settings: { next: { rootDir: "frontend/" } },
   },
   {
     files: ["**/*.{js,mjs,ts,tsx}"],

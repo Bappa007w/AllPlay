@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { displayNameSchema, roomIdSchema } from "@allplay/shared";
-import { generateRoomId, RoomService } from "../../apps/server/src/modules/rooms/room-service.js";
+import { generateRoomId, RoomService } from "../../backend/src/modules/rooms/room-service.js";
 
 describe("room lifecycle", () => {
   function setup() {

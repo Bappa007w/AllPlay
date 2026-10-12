@@ -13,7 +13,7 @@ Socket.IO has a 16 KiB message limit, exact Origin checking and cookie session v
 | Server → client | `room:closed`      | Safe reason text, followed by disconnection                                            |
 | Server → client | `session:replaced` | Another socket took over this membership; old socket disconnects                       |
 
-Typed contracts and Zod input validators live in `packages/shared`. The room ID and actor are bound to the handshake rather than repeated in commands. Presence changes increment revisions. Clients recover a snapshot on every connect, discard older revisions, disable mutation while disconnected and do not enqueue offline commands. Replaced tabs stop reconnecting automatically.
+Typed contracts and Zod input validators live in `shared/contracts`. The room ID and actor are bound to the handshake rather than repeated in commands. Presence changes increment revisions. Clients recover a snapshot on every connect, discard older revisions, disable mutation while disconnected and do not enqueue offline commands. Replaced tabs stop reconnecting automatically.
 
 Create/join have persistent-in-session idempotency receipts. Leave/close are terminal operations: successful execution removes membership/room and disconnects the socket, so replay cannot mutate again. UUIDs are validated but terminal acknowledgment receipts are not retained; after an acknowledgment timeout, refresh membership rather than assume success. Stale commands fail with `STALE_REVISION`; the UI fetches current state and requires another deliberate action. No playback, queue, officer or clock events are implemented yet.
 

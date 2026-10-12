@@ -7,4 +7,9 @@ node_modules
 test-results
 playwright-report
 .env
+.env.*
+**/.env
+**/.env.*
+.vercel
+**/.next-e2e
 *.log

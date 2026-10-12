@@ -9,8 +9,9 @@
     "npm": ">=11 <12"
   },
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "frontend",
+    "backend",
+    "shared/*"
   ],
   "scripts": {
     "dev": "npm run build:packages && concurrently --kill-others --names web,server \"npm run dev --workspace=@allplay/web\" \"npm run dev --workspace=@allplay/server\"",

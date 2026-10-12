@@ -1,11 +1,12 @@
+# Local/container alternative only. Vercel uses the native services in vercel.json.
 FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-COPY apps/server/package.json apps/server/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages/audio-sync/package.json packages/audio-sync/package.json
-COPY packages/shared/package.json packages/shared/package.json
+COPY backend/package.json backend/package.json
+COPY frontend/package.json frontend/package.json
+COPY shared/audio-sync/package.json shared/audio-sync/package.json
+COPY shared/contracts/package.json shared/contracts/package.json
 RUN npm ci
 
 COPY . .

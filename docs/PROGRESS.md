@@ -5,14 +5,16 @@
 - Phase 0 architecture: approved by the user.
 - Phase 1 project initialization: completed and verified on 2026-10-12.
 - Phase 2 UI foundation: completed and verified on 2026-10-12.
-- Phase 3 Room System: explicitly approved and implementation in verification.
+- Phase 3 Room System: implemented; additional free deployment preparation approved.
 - Phase 4 and all later phases: not approved for implementation.
 
 ## Phase 1 implementation
 
+The phase sections below are historical. Current behavior and deployment limitations are summarized in the final section and VERCEL_DEPLOYMENT.md.
+
 Created npm workspaces, exact dependency manifests and lockfile, Next.js/Tailwind development shell, Express health service, fail-closed Socket.IO foundation, strict environment parsing, shared/audio type packages, TypeScript/lint/format tooling, meaningful environment/integration tests and a Windows-compatible real-process smoke runner.
 
-Prepared all nine requested design/progress documents and root WebStorm instructions. Initialized Git without creating a commit. Existing .idea files are preserved and ignored by Git. Next.js generated apps/web/AGENTS.md during its first development run; that framework guidance is retained. Database/migrations, rooms, admin login, music, real playback and synchronization are not implemented.
+Prepared all nine requested design/progress documents and root WebStorm instructions. Initialized Git without creating a commit. Existing .idea files are preserved and ignored by Git. Next.js generated frontend/AGENTS.md during its first development run; that framework guidance is retained. Database/migrations, rooms, admin login, music, real playback and synchronization are not implemented.
 
 ## Validation
 
@@ -46,7 +48,7 @@ Open the root project Terminal and run `npm.cmd run dev`. Visit `http://localhos
 
 ## Approved Phase 2 scope
 
-Implement the original homepage/navigation, create/join interfaces, responsive layouts, theme and reusable accessible components in apps/web/src/app, components/ui and feature modules. Add UI dependencies only when used. Room forms remain clearly nonfunctional until the Phase 3 backend exists. No room service, administrator login or audio playback will be implemented in Phase 2.
+Implement the original homepage/navigation, create/join interfaces, responsive layouts, theme and reusable accessible components in frontend/src/app, components/ui and feature modules. Add UI dependencies only when used. Room forms remain clearly nonfunctional until the Phase 3 backend exists. No room service, administrator login or audio playback will be implemented in Phase 2.
 
 ## Phase 2 implementation
 
@@ -81,3 +83,33 @@ The user subsequently approved Phase 3. Phase 4 Officer/role management still re
 ## Phase 2 manual verification
 
 Run `npm.cmd run dev` from the root and open `/`, `/create` and `/join` at localhost:3000. Check navigation links and FAQ disclosures. Submit blank fields to see validation, then use a display name and `ABCD-EFGH-JK23` to see the explicit preview-only feedback. Resize to a narrow mobile width, test the navigation button and Escape, and use Tab/Enter to reach Skip to content. Forms must never claim an actual room was created or found. Use a clean Chrome profile if browser extensions inject hydration attributes.
+
+## Current: room system and approved free Vercel preparation
+
+Phase 3 now includes real create/join, cookie-bound Host identity, invitations, live participants, revisions, reconnection, tab takeover, leave/close and expiration. Music, Officers, administrator login and audio synchronization remain unimplemented.
+
+The user approved preparing both applications for Vercel without spending money. Added:
+
+- Root Services configuration with one-domain Next.js/Express routing and a server-export entrypoint; Docker remains an alternative, not the Vercel entrypoint.
+- Optional Redis state persistence, optimistic atomic snapshot commits, Socket.IO Redis adapter, bounded cloud capacity and leased presence with periodic reconciliation.
+- Fail-closed cloud configuration, TLS Redis enforcement, protected environment examples and Docker secret exclusions.
+- Deterministic multi-coordinator concurrency/lease/failure tests and an explicitly opt-in real Redis integration test.
+- A deployment guide with Free-plan selection, dashboard variables, manual verification and beta/scale limitations.
+
+### Actual local verification
+
+| Check                       | Result                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Unit/integration            | 41 passed; 1 real Redis test skipped because no test connection URL was supplied                       |
+| Browser journeys            | 12 passed, desktop and mobile-emulated Chrome, including real room lifecycle                           |
+| TypeScript                  | Passed for workspaces and test sources                                                                 |
+| ESLint                      | Passed, zero warnings                                                                                  |
+| Production build            | Passed with isolated `.next-e2e` output to avoid touching the user's active `.next` development output |
+| Vercel configuration        | Valid against the fetched official JSON schema; not a Vercel cloud build                               |
+| Production dependency audit | Zero reported vulnerabilities                                                                          |
+
+No real Redis service, live Vercel deployment, function-duration recovery, physical device or acoustic synchronization test was performed. Known development-only lint dependency advisories remain. No paid resources were provisioned.
+
+The user subsequently stopped the development server and approved completing the simplified folder move. Source is now in `frontend/`, `backend/`, `shared/contracts/` and `shared/audio-sync/`. Workspace links, lockfile, TypeScript inheritance, environment resolution, lint/test paths, process launchers, Docker and Vercel configuration were updated together. Existing source changes and local environment files were preserved. Only the empty former parent directories were removed. Further product phases still require approval.
+
+Post-move verification: 41 unit/integration tests passed (the real Redis test remains skipped), 12 browser tests passed, and TypeScript, lint, formatting, production build, development smoke and production smoke passed. All previously tracked files under the moved source folders exist at their mapped destinations; npm lockfile links point to the new workspaces. Docker paths were updated but no container build was run because Docker is unavailable. Live Redis/Vercel verification remains pending. Start locally from the root with `npm.cmd run dev`.
