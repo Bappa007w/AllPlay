@@ -10,26 +10,43 @@ export function createRuntime(config: ServerEnvironment, testStore?: StateStore)
     config.ROOM_STORE === "redis"
       ? createRedisResources(config.REDIS_URL!, config.REDIS_KEY_PREFIX)
       : null;
-  const rooms = new RoomCoordinator(
-    testStore ?? redis?.store ?? new MemoryStateStore(),
-    config.ROOM_STORE === "redis",
-  );
+  const store = testStore ?? redis?.store ?? new MemoryStateStore();
+  const coordinatedStore: StateStore = {
+    async read() {
+      await ensureReady();
+      return store.read();
+    },
+    async compareAndSet(expected, next) {
+      await ensureReady();
+      return store.compareAndSet(expected, next);
+    },
+  };
+  const rooms = new RoomCoordinator(coordinatedStore, config.ROOM_STORE === "redis");
   const production = config.NODE_ENV === "production";
   const httpServer = createServer(createApp(rooms, config.WEB_ORIGIN, production));
-  const ready = (redis?.ready ?? Promise.resolve()).then(async () => {
-    if (redis) {
-      io.adapter(redis.adapter());
+  let adapterInstalled = false;
+  let initializing: Promise<void> | undefined;
+  function ensureReady(): Promise<void> {
+    if (!redis) return Promise.resolve();
+    initializing ??= (async () => {
+      await redis.ready();
+      if (!adapterInstalled) {
+        io.adapter(redis.adapter());
+        adapterInstalled = true;
+      }
       await redis.subscribed();
-    }
-  });
-  void ready.catch(() => {});
+    })().finally(() => {
+      initializing = undefined;
+    });
+    return initializing;
+  }
   const { io, stop } = createSocketServer(
     httpServer,
     config.WEB_ORIGIN,
     rooms,
     production,
     config.ROOM_STORE === "redis",
-    ready,
+    ensureReady,
   );
   let closing: Promise<void> | undefined;
 
@@ -45,5 +62,12 @@ export function createRuntime(config: ServerEnvironment, testStore?: StateStore)
     return closing;
   }
 
-  return { httpServer, io, close, ready };
+  return {
+    httpServer,
+    io,
+    close,
+    get ready() {
+      return ensureReady();
+    },
+  };
 }

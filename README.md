@@ -2,7 +2,9 @@
 
 **One Beat. Every Device.**
 
-AllPlay is a planned synchronized music platform with account-free rooms and an administrator-managed music library. This repository implements **Phase 3: Room System**: real guest room creation/joining, secure Host identity, live presence, invitations, reconnection and room closure. Officer management, database persistence, administrator authentication, uploads, playback and audio synchronization are not implemented.
+Deployment status: [AllPlay](https://allplay-navy.vercel.app) serves Phase 4. Role-management and room journeys passed in live desktop and mobile-emulated Chrome, with two initial failures that passed on unchanged targeted reruns. See [verification and remaining limitations](docs/VERCEL_DEPLOYMENT.md). Music playback is not implemented yet.
+
+AllPlay is a planned synchronized music platform with account-free rooms and an administrator-managed music library. This repository implements **Phase 4: Role Management** in addition to the room system: Host-only promotion/demotion, a server-enforced three-Officer limit, participant removal and live role updates. PostgreSQL, administrator authentication, uploads, playback and audio synchronization are not implemented.
 
 ## Requirements
 

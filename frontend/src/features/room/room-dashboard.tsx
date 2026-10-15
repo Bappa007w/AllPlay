@@ -8,7 +8,9 @@ import type {
   Membership,
   RoomState,
   ServerToClientEvents,
+  ParticipantAction,
 } from "@allplay/shared";
+import { MAX_OFFICERS } from "@allplay/shared";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, guestSession } from "@/features/room-entry/api";
 import { RoomEntryForm } from "@/features/room-entry/room-entry-form";
@@ -78,6 +80,13 @@ export function RoomDashboard({ roomId }: { roomId: string }) {
             "This room is now open in another tab. Close that tab and reload here to return.",
           );
         });
+        socket.on("participant:removed", () => {
+          terminal = true;
+          setEnded(true);
+          setStatus("Removed from room");
+          setMessage("The Host removed you from this room.");
+          socket?.disconnect();
+        });
         socket.on("room:closed", (reason) => {
           terminal = true;
           setEnded(true);
@@ -105,6 +114,42 @@ export function RoomDashboard({ roomId }: { roomId: string }) {
   }, [roomId, attempt]);
 
   const me = membership?.room.participants.find((member) => member.id === membership.participantId);
+  const officerCount =
+    membership?.room.participants.filter((member) => member.role === "officer").length ?? 0;
+  async function manageParticipant(action: ParticipantAction, participantId: string) {
+    const socket = socketRef.current;
+    if (!socket?.connected || !membership || busy || me?.role !== "host") return;
+    if (
+      action === "participant:remove" &&
+      !window.confirm("Remove this participant from the room?")
+    )
+      return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await socket.timeout(5000).emitWithAck(action, {
+        participantId,
+        requestId: crypto.randomUUID(),
+        expectedRevision: membership.room.revision,
+      });
+      if (result.ok)
+        setMembership((current) =>
+          !current || result.data.room.revision >= current.room.revision ? result.data : current,
+        );
+      else {
+        setMessage(result.error.message);
+        socket.emit("room:state", (latest) => {
+          if (latest.ok) setMembership(latest.data);
+        });
+      }
+    } catch {
+      setMessage(
+        "No confirmation received. Retry connection to check the latest participant roles.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function exitRoom() {
     const socket = socketRef.current;
     if (!socket?.connected || !membership || busy) return;
@@ -180,7 +225,10 @@ export function RoomDashboard({ roomId }: { roomId: string }) {
           <section className="room-panel" aria-labelledby="session-title">
             <h2 id="session-title">Welcome, {me?.displayName}</h2>
             <p>
-              Your role: <strong>{me?.role === "host" ? "Host" : "Participant"}</strong>
+              Your role:{" "}
+              <strong>
+                {me?.role === "host" ? "Host" : me?.role === "officer" ? "Officer" : "Participant"}
+              </strong>
             </p>
             <p>
               Invite your people. Music, queue controls and synchronized audio will arrive in later
@@ -200,15 +248,53 @@ export function RoomDashboard({ roomId }: { roomId: string }) {
             <h2 id="participants-title">
               Participants ({membership.room.participants.length}/{membership.room.capacity})
             </h2>
+            <p role="status" aria-label="Officer count">
+              Officers: {officerCount}/{MAX_OFFICERS}
+            </p>
             <ul className="room-participants">
               {membership.room.participants.map((member) => (
                 <li key={member.id}>
                   <span>
                     <strong>{member.displayName}</strong>
                     {member.id === me?.id ? " (you)" : ""}
-                    <small>{member.role === "host" ? "Host" : "Participant"}</small>
+                    <small>
+                      {member.role === "host"
+                        ? "Host"
+                        : member.role === "officer"
+                          ? "Officer"
+                          : "Participant"}
+                    </small>
                   </span>
                   <span>{member.connected ? "Online" : "Reconnecting"}</span>
+                  {me?.role === "host" && member.role !== "host" && (
+                    <div className="participant-actions">
+                      <Button
+                        variant="outline"
+                        disabled={
+                          busy ||
+                          status !== "Connected" ||
+                          (member.role !== "officer" && officerCount >= MAX_OFFICERS)
+                        }
+                        aria-label={`${member.role === "officer" ? "Demote" : "Promote"} ${member.displayName}`}
+                        onClick={() =>
+                          manageParticipant(
+                            member.role === "officer" ? "officer:demote" : "officer:promote",
+                            member.id,
+                          )
+                        }
+                      >
+                        {member.role === "officer" ? "Demote" : "Make Officer"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={busy || status !== "Connected"}
+                        aria-label={`Remove ${member.displayName}`}
+                        onClick={() => manageParticipant("participant:remove", member.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

@@ -1,12 +1,27 @@
 # Progress
 
+## WebStorm commit-check fixes: 2026-10-16
+
+Resolved the two reported IDE findings without suppressing inspections: room CSS now references the defined `--color-surface` theme token; missing-cookie socket authentication returns `AUTH_REQUIRED` directly instead of throwing into its own catch block. WebStorm inspections report no errors/warnings in both affected files. Added a missing-cookie socket regression test. All 58 tests passed (one isolated Redis test skipped); workspace TypeScript and ESLint passed. These fixes have not been committed, pushed or redeployed. GitHub's screenshot shows checks on the older `63f0e99` commit, not the current working tree.
+
 ## Approval boundary
 
 - Phase 0 architecture: approved by the user.
 - Phase 1 project initialization: completed and verified on 2026-10-12.
 - Phase 2 UI foundation: completed and verified on 2026-10-12.
 - Phase 3 Room System: implemented; additional free deployment preparation approved.
-- Phase 4 and all later phases: not approved for implementation.
+- Phase 4 Role Management: approved, implemented and deployed on 2026-10-16; live test caveats below.
+- Phase 5 and all later phases: not approved for implementation.
+
+## Phase 4 — Role Management: 2026-10-16
+
+Added typed/validated promote, demote and remove socket commands; current Host/socket/revision authorization; protected Host; three-Officer enforcement inside atomic state commits; persisted Officer roles; targeted removal and revocation; live badges, count and Host-only controls with pending/error states. Disconnected reserved Officers count toward the cap. Removal is not a ban: a new explicit join gets a new Participant membership. Music and queue permissions will be enforced by their actual handlers in Phase 7; no mock playback was added.
+
+Verification: 57 unit/integration tests passed; one isolated real-Redis integration test skipped. All 14 desktop/mobile-emulated Chrome tests passed, including role lifecycle, refresh persistence, accessibility and overflow checks. TypeScript, ESLint and production build passed. The build used `.next-e2e` to keep ordinary development output separate. No new dependencies or paid services were added.
+
+Production now serves Phase 4 through deployment `dpl_3hbitqKLA4HvUktnHeYrJkVzFzU3`. Existing Redis state/namespace were preserved; no paid upgrade or credentials change was made. Old-worker parse failures are fail-closed and stale CAS writes are rejected; no zero-interruption or forced mixed-version recovery certification is claimed. Changes remain uncommitted. Stop before Phase 5 until separately approved.
+
+Live verification: initial four-test run had two passes (desktop rooms, mobile roles) and two failures (desktop demotion update, mobile Leave terminal screen). Both failed journeys passed on unchanged targeted reruns. No assertions were relaxed. Live role coverage includes promotion, refresh persistence, demotion, removal, permissions reflected in controls, accessibility and overflow. First-attempt reliability remains a known limitation requiring investigation; local concurrency tests do not establish forced cross-instance live behavior. Latest predeployment checks again passed 57 tests (one isolated Redis test skipped) and test-source TypeScript; cloud production build passed. Live test configuration now includes both room and role suites.
 
 ## Phase 1 implementation
 
@@ -113,3 +128,29 @@ No real Redis service, live Vercel deployment, function-duration recovery, physi
 The user subsequently stopped the development server and approved completing the simplified folder move. Source is now in `frontend/`, `backend/`, `shared/contracts/` and `shared/audio-sync/`. Workspace links, lockfile, TypeScript inheritance, environment resolution, lint/test paths, process launchers, Docker and Vercel configuration were updated together. Existing source changes and local environment files were preserved. Only the empty former parent directories were removed. Further product phases still require approval.
 
 Post-move verification: 41 unit/integration tests passed (the real Redis test remains skipped), 12 browser tests passed, and TypeScript, lint, formatting, production build, development smoke and production smoke passed. All previously tracked files under the moved source folders exist at their mapped destinations; npm lockfile links point to the new workspaces. Docker paths were updated but no container build was run because Docker is unavailable. Live Redis/Vercel verification remains pending. Start locally from the root with `npm.cmd run dev`.
+
+## Live deployment setup: 2026-10-14
+
+Verified Vercel CLI authentication and Hobby plan, then linked the existing `allplay` Services project. The other two legacy projects were left untouched. Its previous production deployment failed with `tsc: command not found`; added explicit root-workspace `npm ci --include=dev --prefix ..` installation for both services. This change still needs a cloud build to verify the fix.
+
+Configured Production `ROOM_STORE`, `REDIS_KEY_PREFIX` and the existing stable project domain as `WEB_ORIGIN`. No Production variables existed before this setup. `REDIS_URL` is still missing and must be supplied securely by the user. The CLI-generated `.env.local` and `.vercel/` remain ignored. No new deployment was submitted without the required database configuration; Phase 4 remains pending until live deployment is verified.
+
+## Live deployment attempt: 2026-10-15
+
+The user supplied the sensitive Production `REDIS_URL`. The public production alias is https://allplay-navy.vercel.app and `WEB_ORIGIN` was aligned with it. Current deployment: `dpl_CNcJ9ro12sEEBof96W6sVD72wAki` (READY). No paid upgrades were enabled and the legacy projects were not modified.
+
+Fixed cloud-only build failures with a root-aware build helper, explicit root dev-dependency installation, and a dedicated CommonJS backend deployment output. The Services builder had selected ordinary `dist/app.js` instead of the HTTP-server entrypoint; explicit `dist/deploy` prevents that. Added upload exclusions for environment files and generated artifacts. Browser live-test configuration reuses the existing lifecycle journey without starting local servers.
+
+Actual result: homepage and health respond, but session bootstrap returns 503 `STORE_UNAVAILABLE`. Sanitized provider diagnostics report `TIMEOUT` and `CONNECTION_FAILED`. Desktop/mobile live journeys failed before room creation; room joining, WebSocket playback/control and cross-instance behavior are not verified. Database endpoint/availability/network settings require user-side verification. No raw Redis URL, password or provider error is logged; fixed-category diagnostics have eight regression cases.
+
+Latest local validation: 49 tests passed and one opt-in real Redis test remains skipped; lint passed. Prior deployment checks also passed TypeScript, formatting and local CommonJS entrypoint loading. The deployed cloud build passed. Phase 4 has not started. Deployment is **partial**, not a completed working room service. Changes remain local and uncommitted; the CLI deployed the working tree, so Git-based deployments need these fixes committed before they can reproduce it.
+
+## Live room verification: 2026-10-16
+
+After the user's Production Redis setting update, fixed an independently identified startup bug: eager connection promises could retain their first rejection indefinitely. Connections now initialize during active requests, share in-flight readiness, clean up listeners, and permit subsequent retries. Adapter initialization is gated before room operations and socket authorization. Added three readiness regression tests. No credentials were printed and no paid upgrades were enabled.
+
+Deployment `dpl_F1xcMtVbBYdTRiNeuzJharXp1njT` is READY at https://allplay-navy.vercel.app. Live session bootstrap returned 200. Mobile-emulated Chrome passed the entire existing room journey. The initial desktop journey failed at Leave with the intended stale-revision review/retry message; the unchanged desktop rerun passed. Do not interpret this as a clean first-run result or guaranteed conflict-free controls.
+
+Verified live: room create/join, presence, Host identity after refresh, network reconnection, newer-tab takeover, participant leave/rejoin, Host closure, and accessibility assertions. No playback or acoustic synchronization was tested or implemented. Physical devices, function-duration expiry, forced separate-instance placement, redeployment with an active room and deliberate Redis outage remain unverified.
+
+Final local checks: TypeScript passed for all workspaces and tests; 52 unit/integration tests passed, one isolated real-Redis integration test skipped; ESLint passed with zero warnings. The deployed production build passed. The subsequent local EventEmitter type correction affects type checking only, not emitted runtime behavior. Changes remain uncommitted. Phase 4 has not started and requires separate approval.

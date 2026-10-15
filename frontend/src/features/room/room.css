@@ -26,7 +26,7 @@
 .room-panel {
   min-width: 0;
   padding: clamp(1rem, 3vw, 2rem);
-  background: var(--surface, #101724);
+  background: var(--color-surface, #101724);
   border: 1px solid #2d3a52;
   border-radius: 1.5rem;
 }
@@ -44,11 +44,18 @@
 }
 .room-participants li {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
   padding-block: 1rem;
   border-bottom: 1px solid #2d3a52;
   overflow-wrap: anywhere;
+}
+.participant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-basis: 100%;
 }
 .room-participants li > span:first-child {
   min-width: 0;

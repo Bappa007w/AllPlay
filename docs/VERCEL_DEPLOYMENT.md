@@ -1,6 +1,8 @@
 # Vercel deployment preparation
 
-Status: configuration and room persistence implementation only. No live deployment or real Redis verification has been completed. This is a small personal demo, not a production-ready synchronized music service. Music, administrator login, Officers and audio synchronization are not implemented.
+Phase 4 was deployed on 2026-10-16 as `dpl_3hbitqKLA4HvUktnHeYrJkVzFzU3`. Redis state and namespace were preserved. Code inspection confirmed that older Phase 3 workers fail closed when parsing Officer roles and that versioned compare-and-set rejects stale writes; heartbeat failure closes old transports for reconnection. This is not a zero-interruption guarantee or a measured old-worker drain: refresh previously open tabs. Rollback to Phase 3 after promotions still requires an explicit compatibility/migration plan.
+
+Status (2026-10-16): Phase 4 is live at https://allplay-navy.vercel.app. The four-test live suite initially had two passes and two failures: desktop demotion did not update the guest within 30 seconds; mobile Leave did not reach its terminal screen. Both failed journeys passed on unchanged targeted reruns. This verifies exercised flows, not consistent first-attempt reliability; do not describe it as a clean four-test pass. Desktop/mobile role journeys cover promotion, persisted role after refresh, demotion, removal, restricted controls and accessibility. The three-Officer concurrency limit is covered locally, not by a forced multi-instance live stress test. Music, administrator login and audio synchronization are not implemented.
 
 ## Free-plan boundary
 
@@ -23,11 +25,24 @@ The configuration targets Vercel Services Beta and WebSockets Beta. Enable Fluid
 
 Vercel supplies `VERCEL=1`; the backend entrypoint forces production behavior. `API_INTERNAL_URL` is not needed for Vercel Services routing. Use the stable project domain for `WEB_ORIGIN`; a different preview/deployment URL will be rejected by Origin checks. For a preview, configure its own exact origin and a distinct Redis key prefix. Never share production state with untrusted previews.
 
-4. Enable Fluid Compute and check that Services/WebSockets Beta are available. The root `vercel.json` routes `/api/*` and `/socket.io/*` to `backend`; everything else goes to `frontend`. Each service builds the shared packages before its own build. The backend exports an HTTP server from `src/vercel.ts`; it does not launch a local port listener.
+4. Enable Fluid Compute and check that Services/WebSockets Beta are available. The root `vercel.json` routes `/api/*` and `/socket.io/*` to `backend`; everything else goes to `frontend`. `scripts/vercel-build.cjs` resolves the repository root regardless of the builder working directory and installs root dev dependencies needed for compilation. The backend compiles `src/vercel.ts` to a CommonJS HTTP-server bundle in `dist/deploy/app.cjs`, selected by an explicit output directory and `backend/app.cjs` entrypoint. Do not use the ordinary `dist` folder as the deployment output: the backend builder can auto-select the non-entrypoint `app.js` there. No local port listener is launched.
 5. Deploy from the dashboard. If the account does not offer these beta capabilities, stop and review a different free hosting design; do not silently select a paid plan.
 6. Complete the verification below before sharing the link widely. Watch both providers' usage dashboards. Health is liveness only and does not prove Redis is working.
 
 ## Required live verification
+
+Connection recovery: the user updated Production `REDIS_URL`; Redis connections now initialize lazily during requests and a failed readiness attempt does not permanently poison later requests. Credentials remain Sensitive. Use a native TLS Redis URL, not a REST URL or shell command. Production `WEB_ORIGIN` is `https://allplay-navy.vercel.app`; other automatically generated aliases may require Vercel authentication and are not the public invitation origin.
+
+Verified live: create/join, presence, Host refresh, network reconnect, tab takeover, participant leave/rejoin, Host closure, and room accessibility checks. The checks below additionally cover duration limits, forced cross-instance placement and failure injection; those have not yet been certified.
+
+Run the existing live room journey explicitly with:
+
+```powershell
+$env:ALLPLAY_LIVE_URL='https://allplay-navy.vercel.app'
+npx.cmd playwright test --config playwright.live.config.ts
+```
+
+This creates test guest sessions and disposable rooms on the target, and closes rooms on successful completion. It does not certify acoustic synchronization or force separate Vercel instances.
 
 - Open `/api/v1/health`, then create a room in a normal browser and join from an incognito profile.
 - Confirm a WebSocket `101` upgrade, presence changes, Host-only close and rejection of foreign origins/invalid CSRF.
@@ -35,7 +50,7 @@ Vercel supplies `VERCEL=1`; the backend entrypoint forces production behavior. `
 - Leave the page open beyond the function duration: transport reconnection must recover the room without duplicating membership.
 - Close a room while the browsers are served by different instances and confirm both receive closure.
 - Test a redeployment with an existing room. Compatible stored schema and the same prefix must preserve membership. Incompatible schema deployments need a migration or an explicitly announced reset; this implementation has no schema migration tool.
-- In a separate test environment, interrupt Redis access and confirm operations fail safely without creating independent memory rooms. Restore access and retry. An instance whose initial Redis connection failed may need recycling; automatic cold-start recovery is not certified.
+- In a separate test environment, interrupt Redis access and confirm operations fail safely without creating independent memory rooms. Restore access and retry. Retryable readiness has unit coverage, but a deliberate live provider outage/recovery test has not been performed.
 
 ## Limits and persistence
 

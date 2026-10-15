@@ -1,5 +1,9 @@
 # Security design and current boundaries
 
+## Phase 4 authorization update
+
+Only the current Host membership and its active socket can promote, demote or remove participants. Strict payload validation rejects client roles and unexpected fields. Revision checks reject stale/replayed mutations. Officers cannot manage participants or close rooms; the Host cannot be demoted/removed. The three-Officer count includes disconnected reserved memberships and is checked inside the same atomic snapshot commit as the mutation. Removal revokes membership before notification. Anonymous users may explicitly rejoin or use another browser identity, so removal is not a permanent ban. No new administrator or music authority is exposed by Phase 4.
+
 Phase 3 is not production-ready. Guest session authentication, Host authorization, CSRF protection and bounded in-memory rate limiting are implemented. Administrator authentication, upload security, deployment hardening and durable persistence remain future phases.
 
 Guest tokens contain 256 random bits and are stored only as SHA-256 digests on the server. Cookies are HttpOnly, SameSite=Strict, 24-hour fixed expiry; production adds Secure and the `__Host-` prefix. CSRF tokens are independent random values; production requires an HTTPS public origin. Strict request schemas reject role injection. Snapshots expose participant UUIDs, never session digests/tokens. Display names render as escaped React text. Anonymous Host identity cannot be recovered without its cookie.

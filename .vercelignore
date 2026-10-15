@@ -1,0 +1,17 @@
+.git
+.idea
+.vercel
+node_modules
+**/node_modules
+.env
+.env.*
+**/.env
+**/.env.*
+**/.next
+**/.next-e2e
+**/dist
+**/*.tsbuildinfo
+test-results
+playwright-report
+coverage
+*.log

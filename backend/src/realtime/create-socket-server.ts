@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import {
   commandSchema,
+  participantCommandSchema,
   socketAuthSchema,
   type ClientToServerEvents,
   type ServerToClientEvents,
@@ -17,7 +18,7 @@ export function createSocketServer(
   coordinator: RoomCoordinator,
   production: boolean,
   cloud: boolean,
-  ready: Promise<void>,
+  ready: () => Promise<void>,
 ) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     serveClient: false,
@@ -47,6 +48,10 @@ export function createSocketServer(
     { token: string; roomId: string; csrfToken: string; socketId: string }
   >();
   coordinator.onChange = (state) => io.to(state.id).emit("room:state", state);
+  coordinator.onRemove = (socketId) => {
+    io.to(socketId).emit("participant:removed");
+    io.in(socketId).disconnectSockets(true);
+  };
   coordinator.onEvict = (socketId) => {
     io.to(socketId).emit("room:closed", "Your guest session expired. Join again.");
     io.in(socketId).disconnectSockets(true);
@@ -58,9 +63,9 @@ export function createSocketServer(
   io.use(async (socket, next) => {
     try {
       const token = cookieToken(socket.handshake.headers.cookie, cookieName);
-      if (!token) throw new RoomFailure("AUTH_REQUIRED", "A guest session is required.", 401);
+      if (!token) return next(new Error("AUTH_REQUIRED"));
       const auth = socketAuthSchema.parse(socket.handshake.auth);
-      await ready;
+      await ready();
       const previous = await coordinator.run((rooms) => {
         const session = rooms.authorize(token, auth.csrfToken);
         rooms.limit(`connect:${session.id}`, 60);
@@ -128,6 +133,21 @@ export function createSocketServer(
           rooms.membership(rooms.session(identity.token), identity.roomId),
         ),
     );
+    for (const action of ["officer:promote", "officer:demote", "participant:remove"] as const) {
+      socket.on(
+        action,
+        (command, ack) =>
+          void execute(ack, (rooms) =>
+            rooms.manageParticipant(
+              rooms.session(identity.token),
+              identity.roomId,
+              socket.id,
+              action,
+              participantCommandSchema.parse(command),
+            ),
+          ),
+      );
+    }
     socket.on("room:leave", (command, ack) => {
       void execute(ack, (rooms) => {
         rooms.command(

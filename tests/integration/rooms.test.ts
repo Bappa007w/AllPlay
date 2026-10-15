@@ -72,6 +72,65 @@ describe("authenticated room HTTP and sockets", () => {
     await ready;
     return socket;
   }
+  it("authorizes role commands, broadcasts roles and disconnects removed participants", async () => {
+    const hostHeaders = await guest(),
+      guestHeaders = await guest();
+    const created = await enter(hostHeaders);
+    if (!created.ok) throw Error("create failed");
+    const id = created.data.room.id;
+    const host = await connect(hostHeaders, id);
+    const joined = await enter(guestHeaders, id);
+    if (!joined.ok) throw Error("join failed");
+    const participant = await connect(guestHeaders, id);
+    const command = async () => {
+      const state = await host.timeout(2000).emitWithAck("room:state");
+      if (!state.ok) throw Error("state failed");
+      return {
+        participantId: joined.data.participantId,
+        requestId: randomUUID(),
+        expectedRevision: state.data.room.revision,
+      };
+    };
+    const denied = await participant.timeout(2000).emitWithAck("officer:promote", await command());
+    expect(denied).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    const changed = new Promise<void>((resolve) =>
+      participant.on("room:state", (state) => {
+        if (state.participants.find((p) => p.id === joined.data.participantId)?.role === "officer")
+          resolve();
+      }),
+    );
+    expect(await host.timeout(2000).emitWithAck("officer:promote", await command())).toMatchObject({
+      ok: true,
+    });
+    await changed;
+    for (const action of ["officer:promote", "officer:demote", "participant:remove"] as const)
+      expect(await participant.timeout(2000).emitWithAck(action, await command())).toMatchObject({
+        ok: false,
+        error: { code: "FORBIDDEN" },
+      });
+    expect(await host.timeout(2000).emitWithAck("officer:demote", await command())).toMatchObject({
+      ok: true,
+    });
+    const removed = new Promise<void>((resolve) =>
+      participant.once("participant:removed", resolve),
+    );
+    const disconnected = new Promise<void>((resolve) =>
+      participant.once("disconnect", () => resolve()),
+    );
+    expect(
+      await host.timeout(2000).emitWithAck("participant:remove", await command()),
+    ).toMatchObject({ ok: true });
+    await Promise.all([removed, disconnected]);
+    await expect(connect(guestHeaders, id)).rejects.toThrow("NOT_A_MEMBER");
+  });
+  it("rejects socket authentication when the guest cookie is missing", async () => {
+    const headers = await guest();
+    const created = await enter(headers);
+    if (!created.ok) throw Error("create failed");
+    await expect(connect({ ...headers, Cookie: "" }, created.data.room.id)).rejects.toThrow(
+      "AUTH_REQUIRED",
+    );
+  });
   it("protects origin, CSRF, body validation and membership privacy", async () => {
     const headers = await guest();
     const invalid = await fetch(`${base}/api/v1/rooms`, {
@@ -107,7 +166,7 @@ describe("authenticated room HTTP and sockets", () => {
       const joined = await enter(guestHeaders, id);
       if (!joined.ok) throw Error("join failed");
       const participant = await connect(guestHeaders, id, transport);
-      let state = await host.timeout(2000).emitWithAck("room:state");
+      const state = await host.timeout(2000).emitWithAck("room:state");
       if (!state.ok) throw Error("state failed");
       expect(state.data.room.participants).toHaveLength(2);
       const denied = await participant.timeout(2000).emitWithAck("room:close", {
@@ -119,12 +178,17 @@ describe("authenticated room HTTP and sockets", () => {
       const replacement = await connect(guestHeaders, id, transport);
       const restored = await replacement.timeout(2000).emitWithAck("room:state");
       expect(restored.ok && restored.data.participantId).toBe(oldParticipant);
-      state = await host.timeout(2000).emitWithAck("room:state");
-      if (!state.ok) throw Error("state failed");
+      const latestState = await new Promise<Result<Membership>>((resolve, reject) => {
+        host.timeout(2000).emit("room:state", (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        });
+      });
+      if (!latestState.ok) throw Error("state failed");
       const closure = new Promise<string>((resolve) => replacement.once("room:closed", resolve));
       const closed = await host.timeout(2000).emitWithAck("room:close", {
         requestId: randomUUID(),
-        expectedRevision: state.data.room.revision,
+        expectedRevision: latestState.data.room.revision,
       });
       expect(closed.ok).toBe(true);
       expect(await closure).toContain("Host closed");

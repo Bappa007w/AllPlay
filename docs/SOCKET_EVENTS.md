@@ -1,5 +1,11 @@
 # Socket.IO protocol
 
+## Implemented Phase 4 additions
+
+Host-only `officer:promote`, `officer:demote` and `participant:remove` take strict `{ requestId: UUID, expectedRevision, participantId: UUID }` and acknowledge `Result<Membership>` for the actor. Actor identity and room come from the authenticated socket. The Host cannot be targeted. All changes increment revision and broadcast `room:state`; replay is rejected as stale. No role-command receipt cache is retained: after timeout inspect authoritative state before a new deliberate action.
+
+Removal commits membership revocation before targeted `participant:removed` and adapter disconnection. A removed member cannot reconnect automatically; a fresh explicit join is allowed as Participant. This is removal, not a durable ban. Disconnected reserved Officers count toward the three-Officer limit until they leave, are removed/demoted, or expire. Count and mutation share the coordinator's atomic compare-and-set, including conflict retries. Playback, queue, clock and room-settings events below remain planned, not implemented.
+
 ## Implemented Phase 3 protocol
 
 Socket.IO has a 16 KiB message limit, exact Origin checking and cookie session validation. Handshake auth is strictly `{ roomId, csrfToken }`. Membership must already exist through REST; roles are never accepted from the client. Unauthorized connections fail with `AUTH_REQUIRED`; guest identity, membership and CSRF are checked again on reconnect. The server revalidates session expiry for each event.
@@ -15,7 +21,7 @@ Socket.IO has a 16 KiB message limit, exact Origin checking and cookie session v
 
 Typed contracts and Zod input validators live in `shared/contracts`. The room ID and actor are bound to the handshake rather than repeated in commands. Presence changes increment revisions. Clients recover a snapshot on every connect, discard older revisions, disable mutation while disconnected and do not enqueue offline commands. Replaced tabs stop reconnecting automatically.
 
-Create/join have persistent-in-session idempotency receipts. Leave/close are terminal operations: successful execution removes membership/room and disconnects the socket, so replay cannot mutate again. UUIDs are validated but terminal acknowledgment receipts are not retained; after an acknowledgment timeout, refresh membership rather than assume success. Stale commands fail with `STALE_REVISION`; the UI fetches current state and requires another deliberate action. No playback, queue, officer or clock events are implemented yet.
+Create/join have persistent-in-session idempotency receipts. Leave/close are terminal operations: successful execution removes membership/room and disconnects the socket, so replay cannot mutate again. UUIDs are validated but terminal acknowledgment receipts are not retained; after an acknowledgment timeout, refresh membership rather than assume success. Stale commands fail with `STALE_REVISION`; the UI fetches current state and requires another deliberate action. No playback, queue or clock events are implemented yet. Officer events are implemented in Phase 4 above.
 
 Synchronous in-memory mutations execute without await points on a single Node process. Horizontal scaling will require shared authority/serialization, not just a Socket.IO adapter.
 

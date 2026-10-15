@@ -4,13 +4,16 @@
     "frontend": {
       "root": "frontend",
       "framework": "nextjs",
-      "buildCommand": "npm run build:packages --prefix .. && npm run build"
+      "installCommand": "node -e \"const fs=require('node:fs');const p=['.','..','../..'].find(p=>fs.existsSync(p+'/scripts/vercel-build.cjs'));if(!p)throw Error('Build helper not found');require(p+'/scripts/vercel-build.cjs')\" install",
+      "buildCommand": "node -e \"const fs=require('node:fs');const p=['.','..','../..'].find(p=>fs.existsSync(p+'/scripts/vercel-build.cjs'));if(!p)throw Error('Build helper not found');require(p+'/scripts/vercel-build.cjs')\" frontend"
     },
     "backend": {
       "root": "backend",
       "framework": "express",
-      "entrypoint": "src/vercel.ts",
-      "buildCommand": "npm run build:packages --prefix .. && npm run build"
+      "installCommand": "node -e \"const fs=require('node:fs');const p=['.','..','../..'].find(p=>fs.existsSync(p+'/scripts/vercel-build.cjs'));if(!p)throw Error('Build helper not found');require(p+'/scripts/vercel-build.cjs')\" install",
+      "entrypoint": "app.cjs",
+      "outputDirectory": "dist/deploy",
+      "buildCommand": "node -e \"const fs=require('node:fs');const p=['.','..','../..'].find(p=>fs.existsSync(p+'/scripts/vercel-build.cjs'));if(!p)throw Error('Build helper not found');require(p+'/scripts/vercel-build.cjs')\" backend"
     }
   },
   "rewrites": [

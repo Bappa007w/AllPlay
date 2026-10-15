@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Membership, RoomCommand, RoomState, RoomParticipant } from "@allplay/shared";
+import { MAX_OFFICERS, type ParticipantAction, type ParticipantCommand } from "@allplay/shared";
 import { z } from "zod";
 
 const MINUTE = 60_000;
@@ -42,6 +43,7 @@ export class RoomService {
   onChange: (state: RoomState) => void = () => {};
   onClose: (roomId: string, reason: string) => void = () => {};
   onEvict: (socketId: string) => void = () => {};
+  onRemove: (socketId: string) => void = () => {};
   constructor(
     private now = Date.now,
     private limitsConfig = { rooms: 500, sessions: 5000 },
@@ -277,6 +279,55 @@ export class RoomService {
       this.changed(room);
     }
   }
+  manageParticipant(
+    session: Session,
+    roomId: string,
+    socketId: string,
+    action: ParticipantAction,
+    command: ParticipantCommand,
+  ) {
+    this.membership(session, roomId);
+    const room = this.room(roomId);
+    const actor = room.participants.get(session.id)!;
+    if (actor.socketId !== socketId)
+      throw new RoomFailure("SESSION_REPLACED", "This room is active in another tab.", 409);
+    if (actor.role !== "host")
+      throw new RoomFailure("FORBIDDEN", "Only the Host can manage participants.", 403);
+    if (command.expectedRevision !== room.revision)
+      throw new RoomFailure(
+        "STALE_REVISION",
+        "Room changed. Review the latest state and retry.",
+        409,
+      );
+    const target = Array.from(room.participants.values()).find(
+      (member) => member.id === command.participantId,
+    );
+    if (!target)
+      throw new RoomFailure("NOT_A_MEMBER", "Participant is no longer in this room.", 404);
+    if (target.role === "host")
+      throw new RoomFailure("PROTECTED_HOST", "The Host cannot be changed or removed.", 403);
+    if (action === "officer:promote") {
+      if (target.role !== "participant")
+        throw new RoomFailure("ROLE_CONFLICT", "Participant is already an Officer.", 409);
+      if (
+        Array.from(room.participants.values()).filter((member) => member.role === "officer")
+          .length >= MAX_OFFICERS
+      )
+        throw new RoomFailure("OFFICER_LIMIT", "A room can have at most three Officers.", 409);
+      target.role = "officer";
+    } else if (action === "officer:demote") {
+      if (target.role !== "officer")
+        throw new RoomFailure("ROLE_CONFLICT", "Participant is not an Officer.", 409);
+      target.role = "participant";
+    } else {
+      room.participants.delete(target.sessionId);
+      const targetSession = this.sessions.get(target.sessionId);
+      if (targetSession) targetSession.roomId = null;
+      if (target.socketId) this.onRemove(target.socketId);
+    }
+    this.changed(room);
+    return this.membership(session, roomId);
+  }
   private closeRoom(room: Room, reason: string) {
     this.rooms.delete(room.id);
     for (const member of room.participants.values()) {
@@ -352,7 +403,7 @@ const persistedSchema = z.object({
         z.object({
           id: z.string(),
           displayName: z.string(),
-          role: z.enum(["host", "participant"]),
+          role: z.enum(["host", "officer", "participant"]),
           connected: z.boolean(),
           sessionId: z.string(),
           socketId: z.string().nullable(),

@@ -22,7 +22,7 @@ export default defineConfig([
     settings: { next: { rootDir: "frontend/" } },
   },
   {
-    files: ["**/*.{js,mjs,ts,tsx}"],
+    files: ["**/*.{js,cjs,mjs,ts,tsx}"],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

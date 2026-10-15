@@ -1,5 +1,11 @@
 # Testing
 
+## Phase 4 verification
+
+Run `npm.cmd run test`, `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run test:ui` from the WebStorm root terminal. Role tests cover the three-Officer cap, concurrent promotions across coordinators sharing a state store, persistence, demotion freeing slots, participant/Officer denial, protected Host, replaced socket, stale revision, malformed payload and removed-member reconnect. Socket integration verifies role broadcasts and targeted removal/disconnection. Desktop and mobile-emulated browser journeys exercise promotion, refresh persistence, demotion, removal, accessibility and horizontal overflow.
+
+Manual check: run `npm.cmd run dev`, create a room, and join its invitation from a separate browser profile. Host sees Make Officer, Demote and Remove; other roles do not. Promote three guests and verify a fourth promotion is disabled; demote one and retry. Remove a member and verify its terminal screen. Music controls remain explicitly unavailable. The local Phase 4 suite is not a live Vercel or physical-device certification.
+
 ## Phase 1 checks
 
 Run from the repository root with npm.cmd on Windows:

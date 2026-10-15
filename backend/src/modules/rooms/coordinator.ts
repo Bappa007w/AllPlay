@@ -21,11 +21,12 @@ export class MemoryStateStore implements StateStore {
 type Event =
   | { kind: "state"; state: RoomState }
   | { kind: "close"; roomId: string; reason: string }
-  | { kind: "evict"; socketId: string };
+  | { kind: "evict" | "remove"; socketId: string };
 export class RoomCoordinator {
   onChange: (state: RoomState) => void = () => {};
   onClose: (roomId: string, reason: string) => void = () => {};
   onEvict: (socketId: string) => void = () => {};
+  onRemove: (socketId: string) => void = () => {};
   constructor(
     private store: StateStore = new MemoryStateStore(),
     private cloud = false,
@@ -54,6 +55,7 @@ export class RoomCoordinator {
       rooms.onChange = (state) => events.push({ kind: "state", state });
       rooms.onClose = (roomId, reason) => events.push({ kind: "close", roomId, reason });
       rooms.onEvict = (socketId) => events.push({ kind: "evict", socketId });
+      rooms.onRemove = (socketId) => events.push({ kind: "remove", socketId });
       let data: T | undefined;
       let failure: RoomFailure | undefined;
       try {
@@ -89,6 +91,7 @@ export class RoomCoordinator {
       for (const event of events) {
         if (event.kind === "state") this.onChange(event.state);
         else if (event.kind === "close") this.onClose(event.roomId, event.reason);
+        else if (event.kind === "remove") this.onRemove(event.socketId);
         else this.onEvict(event.socketId);
       }
       if (failure) throw failure;
